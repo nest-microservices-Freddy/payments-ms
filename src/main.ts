@@ -2,11 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { envs } from './config';
 import { Logger, ValidationPipe } from '@nestjs/common';
-// import * as express from 'express';
 
 async function bootstrap() {
   const logger = new Logger('Payments-ms');
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true,
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -15,8 +16,6 @@ async function bootstrap() {
       transform: true,
     }),
   );
-
-  // app.use(express.raw({ type: 'application/json' }));
 
   logger.log('Payments-ms is running on port: ' + envs.port);
   await app.listen(envs.port);

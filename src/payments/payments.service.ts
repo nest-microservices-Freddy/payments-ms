@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import Stripe from 'stripe';
 import { PaymentSessionDto } from './dto/payment-session.dto';
 import { Request, Response } from 'express';
+import { env } from 'process';
+import { envs } from '../config/envs';
 
 @Injectable()
 export class PaymentsService {
@@ -9,7 +11,7 @@ export class PaymentsService {
 
   async createPaymentSession(paymentSessionDto: PaymentSessionDto) {
     try {
-      const { currency, items } = paymentSessionDto;
+      const { currency, items, orderId } = paymentSessionDto;
 
       const lineItems = items.map((item) => ({
         price_data: {
@@ -24,11 +26,15 @@ export class PaymentsService {
 
       const session = await this.stripe.checkout.sessions.create({
         // colocar aca el id de mi orden
-        payment_intent_data: {},
+        payment_intent_data: {
+          metadata: {
+            orderId,
+          },
+        },
         line_items: lineItems,
         mode: 'payment',
-        success_url: 'http://localhost:3003/payments/success',
-        cancel_url: 'http://localhost:3003/payments/cancel',
+        success_url: envs.successUrl,
+        cancel_url: envs.cancelUrl,
       });
       return session;
     } catch (error) {
@@ -40,12 +46,12 @@ export class PaymentsService {
     const sig = req.headers['stripe-signature'];
 
     let event: Stripe.Event;
-    const endpointSecret =
-      // 'whsec_26c63369fdf66c27401bbe56eeec7e6698de7e2cf0d5d45f8a5ade0f62723113'; //testing
-      'whsec_2zAGLaLtfI0iOmB2snXCPOrJUg608MSm'; //prod
+    // 'whsec_26c63369fdf66c27401bbe56eeec7e6698de7e2cf0d5d45f8a5ade0f62723113'; //testing
+    const endpointSecret = envs.stripeEndpointSecret;
+    console.log('req', req['rawBody']);
     try {
       event = this.stripe.webhooks.constructEvent(
-        req.body,
+        req['rawBody'],
         sig,
         endpointSecret,
       );
@@ -53,7 +59,10 @@ export class PaymentsService {
       switch (event.type) {
         case 'charge.succeeded': {
           // llamar microservicio
-          console.log(event);
+          const chargeSucceeded = event.data.object as Stripe.Charge;
+          console.log('charge.succeeded', {
+            metadata: chargeSucceeded.metadata,
+          });
           break;
         }
         // case 'payment_intent.succeeded': {
