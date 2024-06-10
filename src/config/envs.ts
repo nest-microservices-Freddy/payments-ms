@@ -1,13 +1,15 @@
-import "dotenv/config";
-import * as joi from "joi";
+import 'dotenv/config';
+import * as joi from 'joi';
 
 interface EnvVars {
   PORT: number;
+  STRIPE_SECRET: string;
 }
 
 const envsSchema = joi
   .object({
     PORT: joi.number().required(),
+    STRIPE_SECRET: joi.string().required(),
   })
   .unknown(true);
 
@@ -19,4 +21,5 @@ const envsVars: EnvVars = value;
 
 export const envs = {
   port: envsVars.PORT,
+  stripeSecret: envsVars.STRIPE_SECRET,
 };
